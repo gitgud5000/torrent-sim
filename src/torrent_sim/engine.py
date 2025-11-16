@@ -241,6 +241,7 @@ def _finalize_completed_downloads(swarm: SwarmState) -> None:
 
     for peer in swarm.active_peers():
         if peer.peer_id == SEED_PEER_ID:
+            peer.completed_time = 0.0  # seed has full file at t=0
             continue  # seed already has all pieces
 
         new_pieces: list[int] = []
@@ -260,7 +261,7 @@ def _finalize_completed_downloads(swarm: SwarmState) -> None:
         peer.active_downloads = remaining_tasks
 
         # set complted_time if this is the first time peer gets the full file
-        if peer.is_complete(num_pieces) is None and peer.is_complete(num_pieces):
+        if peer.completed_time is None and peer.is_complete(num_pieces):
             peer.completed_time = t_now
 
 
