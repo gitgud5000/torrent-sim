@@ -64,7 +64,7 @@ def plot_swarm_snapshot(
             frac = 0.0
             up_mbps = 1.0
         else:
-            frac = peer.completion_fractions(num_pieces)
+            frac = peer.completion_fraction(num_pieces)
             up_mbps = peer.bandwidth.up_mbps
 
         completion.append(frac)

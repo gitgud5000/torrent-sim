@@ -281,7 +281,7 @@ def _log_metrics(swarm: SwarmState, metrics: SimulationMetrics) -> None:
     num_peers = len(peers)
     completed = sum(1 for p in peers if p.is_complete(swarm.num_pieces))
     avg_completion = (
-        sum(p.completion_fractions(swarm.num_pieces) for p in peers) / num_peers
+        sum(p.completion_fraction(swarm.num_pieces) for p in peers) / num_peers
     )
 
     metrics.times.append(t)

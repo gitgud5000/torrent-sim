@@ -66,7 +66,7 @@ class PeerState:
         """Number of pieces this peer currently owns."""
         return len(self.owned_pieces)
 
-    def completion_fractions(self, num_pieces: int) -> float:
+    def completion_fraction(self, num_pieces: int) -> float:
         """Fraction of pieces owned (0.0 to 1.0)."""
         if num_pieces == 0:
             return 0.0
