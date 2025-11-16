@@ -33,11 +33,11 @@ class BandwidthConfig:
     prob_symmetric: float = 0.3
 
     # Symmetric peer (e.g. fiber)
-    sym_up_mean_mbps: float = 10.0
-    sym_down_mean_mbps: float = 10.0
+    sym_up_mean_mbps: float = 100.0
+    sym_down_mean_mbps: float = 100.0
 
     # Asymmetric peer (e.g. ADSL)
-    asym_up_mean_mbps: float = 2.0
+    asym_up_mean_mbps: float = 10.0
     asym_down_mean_mbps: float = 50.0
 
     # Relative std dev for randomness (std = mean * factor)
