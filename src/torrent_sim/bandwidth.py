@@ -59,8 +59,7 @@ def _sample_positive_normal(
         return max(mean, min_value)
 
     value = rng.normal(loc=mean, scale=std)
-    if value < min_value:
-        value = min_value
+    value = max(value, min_value)
     return value
 
 
