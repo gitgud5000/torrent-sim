@@ -203,15 +203,12 @@ def _compute_link_rates(swarm: SwarmState) -> dict[tuple[int, int], float]:
         # Only consider peers that have joined
         if recv.join_time > swarm.current_time:
             continue
-
         for task in recv.active_downloads:
             # Skip completed tasks
             if task.remaining_bits <= 0:
                 continue
-
             send_id = task.from_peer_id
             recv_id = recv.peer_id
-
             upload_counts[send_id] = upload_counts.get(send_id, 0) + 1
             download_counts[recv_id] = download_counts.get(recv_id, 0) + 1
 
@@ -229,7 +226,6 @@ def _compute_link_rates(swarm: SwarmState) -> dict[tuple[int, int], float]:
         for task in recv.active_downloads:
             if task.remaining_bits <= 0:
                 continue
-
             send_id = task.from_peer_id
             if send_id not in swarm.peers:
                 continue
@@ -257,7 +253,8 @@ def _compute_arc_specs(
     G: nx.Graph,
     link_rates: dict[tuple[int, int], float],
     rate_clip_mbps: float = 100.0,
-    rad_val: float = 0.20,
+    # Changed default rad_val to be slightly higher for better separation
+    rad_val: float = 0.15,
 ) -> list[ArcSpec]:
     """
     For each directed flow (u, v) with rate > 0:
@@ -274,65 +271,51 @@ def _compute_arc_specs(
     completion_frac: dict[int, float] = {}
     for node_id in G.nodes():
         peer = swarm.peers.get(node_id)
-        if peer is None:
-            completion_frac[node_id] = 0.0
-        else:
-            completion_frac[node_id] = peer.completion_fraction(num_pieces)
+        completion_frac[node_id] = peer.completion_fraction(num_pieces) if peer else 0.0
 
     # convert rates to Mbps and drop non-positive
     link_rates_mbps: dict[tuple[int, int], float] = {}
     for (u, v), rate_bps in link_rates.items():
-        if rate_bps <= 0:
-            continue
-        link_rates_mbps[(u, v)] = rate_bps / 1e6  # bits/s -> Mbit/s
-
-    # group flows by unordered pair {u, v} to assign opposite rads
-    pair_to_flows: dict[frozenset[int], list[tuple[int, int, float]]] = {}
-    for (u, v), r_mbps in link_rates_mbps.items():
-        pair = frozenset({u, v})
-        pair_to_flows.setdefault(pair, []).append((u, v, r_mbps))
+        if rate_bps > 0:
+            link_rates_mbps[(u, v)] = rate_bps / 1e6
 
     green_cmap = plt.get_cmap("Greens")
     blue_cmap = plt.get_cmap("Blues")
 
-    width_min = 1
-    width_scale = 30  # so widths live roughly in [0.4, 2.4]
+    width_min = 1.5  # Slightly thicker minimum for visibility
+    width_scale = 20  # Adjusted scale
 
     arc_specs: list[ArcSpec] = []
 
-    for pair, flows in pair_to_flows.items():
-        # flows: list of (u, v, rate_mbps)
-        # Ensure deterministic order
-        flows_sorted = sorted(flows, key=lambda x: (x[0], x[1]))
+    # We process every single flow.
+    # Crucially, we do NOT check if the reverse flow exists.
+    # We ALWAYS curve.
+    for (u, v), r_mbps in link_rates_mbps.items():
+        # Always apply positive curvature.
+        # In Matplotlib, 'rad=0.15' curves the line to the RIGHT
+        # relative to the direction u->v.
+        # This means u->v curves one way, and v->u curves the OTHER way spatially,
+        # creating a perfect separation (eye shape).
+        rad = rad_val
 
-        if len(flows_sorted) == 2:
-            # two directions between same unordered pair -> opposite rads
-            rad_signs = [+rad_val, -rad_val]
+        r_eff = min(r_mbps, rate_clip_mbps)
+        norm = r_eff / rate_clip_mbps if rate_clip_mbps > 0 else 0.0
+        width = width_min + width_scale * norm
+
+        f_u = completion_frac.get(u, 0.0)
+        f_v = completion_frac.get(v, 0.0)
+
+        if f_u >= f_v:
+            # Seeding flow (More complete -> Less complete)
+            # Scale color from light green to dark green
+            color_val = 0.4 + 0.6 * norm
+            color = green_cmap(color_val)
         else:
-            # single-direction or weird case -> straight
-            rad_signs = [0.0] * len(flows_sorted)
+            # Leeching/Backwards flow (Less complete -> More complete)
+            color_val = 0.4 + 0.6 * norm
+            color = blue_cmap(color_val)
 
-        for (u, v, r_mbps), rad in zip(flows_sorted, rad_signs):
-            # clip rate
-            r_eff = min(r_mbps, rate_clip_mbps)
-            norm = r_eff / rate_clip_mbps if rate_clip_mbps > 0 else 0.0
-
-            # width scaling
-            width = width_min + width_scale * norm
-
-            # seeding direction based on completion
-            f_u = completion_frac.get(u, 0.0)
-            f_v = completion_frac.get(v, 0.0)
-            if f_u >= f_v:
-                base_cmap = green_cmap  # u -> v is seeding
-            else:
-                base_cmap = blue_cmap  # u -> v is "backwards" flow
-
-            # color intensity also scaled by rate
-            color_val = 0.3 + 0.7 * norm  # avoid ultra-pale arcs
-            color = base_cmap(color_val)
-
-            arc_specs.append(ArcSpec(u=u, v=v, width=width, color=color, rad=rad))
+        arc_specs.append(ArcSpec(u=u, v=v, width=width, color=color, rad=rad))
 
     return arc_specs
 
@@ -355,10 +338,11 @@ def _draw_arcs(
     # We'll draw each arc individually so we can vary rad per edge.
     for arc in arc_specs:
         u, v, width, color, rad = arc
-        H = nx.DiGraph()  # pylint: disable=invalid-name
-        H.add_nodes_from([u, v])
+        H = nx.DiGraph()
         H.add_edge(u, v)
 
+        # connectionstyle "arc3,rad=..." creates the curve.
+        # mutation_scale controls the size of the arrow head.
         nx.draw_networkx_edges(
             H,
             pos=pos,
@@ -366,10 +350,12 @@ def _draw_arcs(
             edgelist=[(u, v)],
             width=[width],
             edge_color=[color],
-            alpha=0.9,
+            alpha=0.85,  # Slight transparency
             connectionstyle=f"arc3,rad={rad}",
-            arrowstyle="->",  # no head, just curved segment
-            arrows=True,
+            arrowstyle="-|>",  # Sharp triangle arrow
+            arrowsize=15,  # Explicit arrow size
+            min_source_margin=15,  # Don't start line inside the node
+            min_target_margin=15,  # Don't end line inside the node
         )
 
 
@@ -379,6 +365,7 @@ def plot_swarm_snapshot(
     ax: plt.Axes | None = None,
     show: bool = True,
     show_topology: bool = False,
+    show_colorbar: bool = True,
 ) -> plt.Axes:
     """
     Plot a swarm snapshot:
@@ -397,15 +384,14 @@ def plot_swarm_snapshot(
             - rad chosen so u->v and v->u separate when both exist
     """
     swarm = _as_swarm(result_or_swarm)
-    G: nx.Graph = swarm.graph  # pylint: disable=invalid-name
-    # print("Function 'plot_swarm_snapshot' is currently disabled.")
+    G: nx.Graph = swarm.graph
 
     if ax is None:
-        fig, ax = plt.subplots(figsize=(10, 8), dpi=400)
+        fig, ax = plt.subplots(figsize=(12, 10), dpi=150)  # Adjusted fig size/dpi
 
     # Ensure higher DPI for crisper rendering even if an Axes was provided
     if ax.figure is not None:
-        ax.figure.set_dpi(400)
+        ax.figure.set_dpi(150)
     ax.set_facecolor("#fafafa")
 
     # 1) Layout
@@ -418,18 +404,18 @@ def plot_swarm_snapshot(
     link_rates = _compute_link_rates(swarm)
     arc_specs = _compute_arc_specs(swarm, G, link_rates)
 
-    # 4) Optional faint topology background
+    # Optional faint topology background (The potential connections)
     if show_topology and len(G.edges) > 0:
         nx.draw_networkx_edges(
             G,
             pos=pos,
             ax=ax,
-            width=1,
-            alpha=0.7,
-            edge_color="#cccccc",
+            width=0.8,
+            alpha=0.40,  # Very faint
+            edge_color="#999999",
+            style="dashed",  # Dashed lines for topology
         )
 
-    # 5) Directional arcs for traffic
     _draw_arcs(ax, pos, arc_specs)
 
     # 6) Nodes (with seed outlined purple)
@@ -437,13 +423,15 @@ def plot_swarm_snapshot(
 
     # 7) Axes cosmetics
     ax.set_axis_off()
-    ax.set_title(f"Swarm snapshot (t = {swarm.current_time:.1f}s)")
+    ax.set_title(f"Swarm Snapshot (t = {swarm.current_time:.1f}s)", fontsize=14)
+
     sm = plt.cm.ScalarMappable(
         cmap=plt.get_cmap("cividis_r"), norm=plt.Normalize(vmin=0, vmax=1)
     )
     sm.set_array([])
-    cbar = plt.colorbar(sm, ax=ax, fraction=0.046, pad=0.04)
-    cbar.set_label("Completion Fraction", rotation=270, labelpad=15)
+    if show_colorbar:
+        cbar = plt.colorbar(sm, ax=ax, fraction=0.03, pad=0.02)
+        cbar.set_label("Completion Fraction", rotation=270, labelpad=15)
 
     if show and ax.figure:
         plt.show()
