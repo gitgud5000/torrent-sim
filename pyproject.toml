@@ -8,12 +8,14 @@ authors = [
 ]
 requires-python = ">=3.13"
 dependencies = [
+    "ffmpeg>=1.4",
     "ipykernel>=7.1.0",
     "jupyterlab>=4.4.10",
     "matplotlib>=3.10.7",
     "networkx>=3.5",
     "numpy>=2.3.4",
     "plotly>=6.4.0",
+    "scipy>=1.16.3",
     "simpy>=4.1.1",
 ]
 
@@ -27,7 +29,39 @@ build-backend = "uv_build"
 [dependency-groups]
 dev = [
     "black>=25.11.0",
+    "graphviz>=0.21",
     "mypy>=1.18.2",
+    "pydeps>=3.0.1",
+    "pylint>=4.0.3",
     "pytest>=9.0.1",
     "ruff>=0.14.5",
+]
+
+[tool.pylint.messages_control]
+disable = [
+    "missing-class-docstring",
+]
+
+[tool.ruff.format]
+docstring-code-format = true
+
+[tool.ruff]
+line-length = 88
+indent-width = 4
+show-fixes = true
+# src = ["src","notebooks","notebooks/modelling/"]
+exclude = [
+    "*.git",
+]
+
+[tool.ruff.lint]
+select = [
+    "F",   # Pyflakes
+    "W",   # pycodestyle
+    "E",   # pycodestyle
+    "I",   # isort
+    "UP",  # pyupgrade
+    "PL",  # Pylint
+    "T201", # Print Statement
+    "C"
 ]
