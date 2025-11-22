@@ -247,7 +247,7 @@ def _compute_link_rates(swarm: SwarmState) -> dict[tuple[int, int], float]:
     return link_rates
 
 
-def _compute_arc_specs(
+def _compute_edge_specs(
     swarm: SwarmState,
     G: nx.Graph, #pylint: disable=invalid-name
     link_rates: dict[tuple[int, int], float],
@@ -412,7 +412,7 @@ def plot_swarm_snapshot(
 
     # 3) Link rates & arc specs
     link_rates = _compute_link_rates(swarm)
-    arc_specs = _compute_arc_specs(swarm, G, link_rates)
+    arc_specs = _compute_edge_specs(swarm, G, link_rates)
 
     # Optional faint topology background (The potential connections)
     if show_topology and len(G.edges) > 0:
