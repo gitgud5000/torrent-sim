@@ -319,7 +319,7 @@ def _compute_edge_specs(
     return arc_specs
 
 
-def _draw_arcs(
+def _draw_edges(
     ax: plt.Axes, pos: Node, arc_specs: list[ArcSpec]
 ) -> None:
     """
@@ -426,7 +426,7 @@ def plot_swarm_snapshot(
             style="dashed",  # Dashed lines for topology
         )
 
-    _draw_arcs(ax, pos, arc_specs)
+    _draw_edges(ax, pos, arc_specs)
 
     # 6) Nodes (with seed outlined purple)
     _draw_nodes(ax, pos, node_ids, node_colors, node_sizes, SEED_PEER_ID)

@@ -13,7 +13,7 @@ from .arrival import (
     arrivals_up_to_time,
     generate_poisson_arrivals,
 )
-from .bandwidth import BandwidthProfile, sample_bandwidth_profile
+from .bandwidth import BandwidthProfile, PeerKind, sample_bandwidth_profile
 from .model import DownloadTask, PeerState, SwarmState
 from .topology import SEED_PEER_ID, add_peer_with_topology, create_initial_graph
 
@@ -149,6 +149,7 @@ def _start_new_downloads(swarm: SwarmState) -> None:
                 continue  # no pieces to offer
 
             # Choose random piece to download (MVP:L random; later: rarest-first etc)
+            #TODO: implement rarest-first piece selection
             piece_idx = rng.choice(candidate_pieces)
 
             # Create DownloadTask
@@ -325,7 +326,14 @@ def run_timestep_sim(config: Config,
         swarm.rng = rng
 
     # Initialize seed with full file and its own bandwidth
-    seed_bw = sample_bandwidth_profile(config.bandwidth, rng)
+    if config.bandwidth.override_seed_bandwidth:
+        seed_bw = BandwidthProfile(
+            up_mbps=config.bandwidth.override_seed_up_mbps,
+            down_mbps=config.bandwidth.override_seed_down_mbps,
+            kind=PeerKind.SYMMETRIC,
+        )
+    else:
+        seed_bw = sample_bandwidth_profile(config.bandwidth, rng)
     swarm.initialize_seed(seed_bw)
 
     # Arrival schedule for all non-seed peers

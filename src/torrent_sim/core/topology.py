@@ -100,7 +100,8 @@ def _add_peer_barabasi_like(
 
 # ER-style attachment for new peer
 # For ER-style, we connect to each existing node with probability p.
-# We want expected degree near avg_degree. For a node joining into n_existing nodes, its expected degree is:
+# We want expected degree near avg_degree. For a node joining 
+# into n_existing nodes, its expected degree is:
 #   E[degree] = p * n_existing
 # So choose p = avg_degree / n_existing, capped to 1.
 
@@ -128,7 +129,7 @@ def _add_peer_erdos_renyi_like(
         # Only this node exists, nothing to connect to.
         return
 
-    # Choose p so taht E[degree] ≈ avg_degree for this new node.
+    # Choose p so that E[degree] ≈ avg_degree for this new node.
     p = cfg.avg_degree / n_existing
     p = float(np.clip(p, 0.0, 1.0))
 

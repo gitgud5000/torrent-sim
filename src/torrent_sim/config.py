@@ -33,6 +33,10 @@ class BandwidthConfig:
 
     prob_symmetric: float = 0.3
 
+    override_seed_bandwidth: bool = False
+    override_seed_up_mbps: float = 1_000.0
+    override_seed_down_mbps: float = 1_000.0
+
     # Symmetric peer (e.g. fiber)
     sym_up_mean_mbps: float = 100.0
     sym_down_mean_mbps: float = 100.0
