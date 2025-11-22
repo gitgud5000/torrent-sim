@@ -303,7 +303,9 @@ def _log_metrics(swarm: SwarmState, metrics: SimulationMetrics) -> None:
 
 
 # 9️⃣ Main entrypoint: run_timestep_sim
-def run_timestep_sim(config: Config) -> SimulationResult:
+def run_timestep_sim(config: Config,
+                     rng: np.random.Generator | None = None
+                     ) -> SimulationResult:
     """
     Run the 0->MVP timestep-based torrent simulation.
 
@@ -316,7 +318,10 @@ def run_timestep_sim(config: Config) -> SimulationResult:
     # 1) Initialization
     G: nx.Graph = create_initial_graph() # pylint: disable=invalid-name
     swarm = SwarmState(config=config, graph=G)
-    rng = swarm.rng
+    if rng is None:
+        rng = swarm.rng
+    else:
+        swarm.rng = rng
 
     # Initialize seed with full file and its own bandwidth
     seed_bw = sample_bandwidth_profile(config.bandwidth, rng)
@@ -378,16 +383,21 @@ def run_timestep_sim(config: Config) -> SimulationResult:
 def run_timestep_sim_with_frames(
     config: Config,
     snapshot_interval: float = 5.0,
+    rng: np.random.Generator | None = None,
 ) -> SimulationTrajectory:
-    """
-    Run the timestep simulation and record `SwarmState` snapshots at regular intervals.
-    NOTE: this uses deepcopy on SwarmState, which can be memory-intensive for large swarms.
+    """Run the timestep simulation and record snapshots.
+
+    Takes periodic deep copies of SwarmState (can be memory intensive
+    for large swarms) to enable later visualization/animation.
     """
 
     # 1) Initialization (same as run_timestep_sim)
     G: nx.Graph = create_initial_graph()  # pylint: disable=invalid-name
     swarm = SwarmState(config=config, graph=G)
-    rng = swarm.rng
+    if rng is None:
+        rng = swarm.rng
+    else:
+        swarm.rng = rng
 
     seed_bw = sample_bandwidth_profile(config.bandwidth, rng)
     swarm.initialize_seed(seed_bw)
@@ -409,7 +419,7 @@ def run_timestep_sim_with_frames(
     next_snapshot_time = 0.0
 
     # 2) Main simulation loop
-    while t < max_time:
+    while t <= max_time:
         swarm.current_time = t
 
         # arrivals

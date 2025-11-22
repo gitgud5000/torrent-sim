@@ -99,7 +99,7 @@ class SwarmState:
     graph: nx.Graph
     peers: dict[int, PeerState] = field(default_factory=dict)
     current_time: float = 0.0
-    rng: np.random.Generator = field(default_factory=lambda: np.random.default_rng())
+    rng: np.random.Generator = field(default_factory=np.random.default_rng)
 
     # Cached file-related quantities for convenience
     num_pieces: int = field(init=False)
