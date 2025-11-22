@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Tuple
 
 
 @dataclass
@@ -30,6 +29,8 @@ class ArrivalConfig:
 @dataclass
 class BandwidthConfig:
     # Probability a new peer is symmetric (up ~ down)
+    max_concurrent_downloads: int = 2
+
     prob_symmetric: float = 0.3
 
     # Symmetric peer (e.g. fiber)

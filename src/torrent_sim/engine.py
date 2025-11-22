@@ -84,8 +84,7 @@ def _spawn_peer(
     add_peer_with_topology(swarm.graph, peer_id, cfg.graph, rng)
 
 
-# Helper: start new download (very simple policy for MVP)
-# We’ll define a max concurrent downloads per peer (MVP constant).
+# Helper: start new downloads (very simple policy for MVP)
 # For each active peer:
 #   if not complete, and has free slots:
 #       find neighbors that:
@@ -95,18 +94,18 @@ def _spawn_peer(
 #       choose a random neighbor.
 #       choose a random piece that neighbor has & peer lacks.
 #       create DownloadTask with remaining_bits = piece_size_bits.
-MAX_CONCURRENT_DOWNLOADS = 2  # MVP parameter; can go into Config later.
 
 
 def _start_new_downloads(swarm: SwarmState) -> None:
     """
-    For each active peer, start new downloads up to MAX_CONCURRENT_DOWNLOADS,
-    if neighbors have pieces they lack.
+    For each active peer, start new downloads up to the configured
+    max_concurrent_downloads if neighbors have pieces they lack.
     """
 
     rng = swarm.rng
     num_pieces = swarm.num_pieces
     piece_size_bits = swarm.piece_size_bits
+    max_concurrent = swarm.config.bandwidth.max_concurrent_downloads
 
     for peer in swarm.active_peers():
         # Skip seed (it already has all piece; treat it as pure uploader)
@@ -121,7 +120,7 @@ def _start_new_downloads(swarm: SwarmState) -> None:
         active_downloads = [t for t in peer.active_downloads if t.remaining_bits > 0]
         peer.active_downloads = active_downloads  # clean up completed downloads
 
-        free_slots = MAX_CONCURRENT_DOWNLOADS - len(active_downloads)
+        free_slots = max_concurrent - len(active_downloads)
         if free_slots <= 0:
             continue
 
