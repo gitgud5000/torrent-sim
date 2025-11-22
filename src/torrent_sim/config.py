@@ -6,8 +6,8 @@ from typing import Tuple
 
 @dataclass
 class FileConfig:
-    file_size_mb: float = 1_000
-    piece_size_mb: float = 1
+    file_size_mb: float = 1_000  # 1 GB
+    piece_size_mb: float = 1 # 1 MB
 
     @property
     def num_pieces(self) -> int:
@@ -97,4 +97,3 @@ __all__ = [
     "Config",
     "default_config",
 ]
-
