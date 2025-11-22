@@ -232,8 +232,7 @@ def _step_downloads(swarm: SwarmState, dt: float) -> None:
             transferred_bits = rate * dt
 
             task.remaining_bits -= transferred_bits
-            if task.remaining_bits < 0:
-                task.remaining_bits = 0  # clamp
+            task.remaining_bits = max(task.remaining_bits, 0)  # clamp
 
 
 # 7️⃣ Helper: finalize completed pieces and completion times
@@ -243,9 +242,11 @@ def _step_downloads(swarm: SwarmState, dt: float) -> None:
 #   Optionally clear completed tasks,
 #   Set completed_time if peer now owns all pieces.
 def _finalize_completed_downloads(swarm: SwarmState) -> None:
-    """
-    For tasks that have finished (remaining_bits <= 0), grant the piece to the receiver peer
-    and record completion time if they now have the full file.
+    """Grant pieces for tasks that finished and set completion time.
+
+    For each active peer, any task with remaining_bits <= 0 yields its
+    piece. When a peer owns all pieces for the first time, record
+    completed_time.
     """
 
     num_pieces = swarm.num_pieces
