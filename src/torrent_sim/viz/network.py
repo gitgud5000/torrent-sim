@@ -4,7 +4,6 @@ from typing import NamedTuple
 
 import matplotlib.pyplot as plt
 import networkx as nx
-import numpy as np
 from matplotlib import colors as mcolors
 
 from torrent_sim.engine import SimulationResult
@@ -34,7 +33,7 @@ def _as_swarm(obj) -> SwarmState:
     raise TypeError(f"Unsupported type for swarm: {type(obj)!r}")
 
 
-def _compute_layout(G: nx.Graph, layout: str) -> Node:
+def compute_layout(G: nx.Graph, layout: str) -> Node: #pylint: disable=invalid-name
     """
     Compute a 2D layout for the swarm graph.
 
@@ -67,7 +66,7 @@ def _compute_layout(G: nx.Graph, layout: str) -> Node:
 
 
 def _compute_node_style(
-    swarm: SwarmState, G: nx.Graph
+    swarm: SwarmState, G: nx.Graph #pylint: disable=invalid-name
 ) -> tuple[list[int], list[tuple], list[float]]:
     """
     Returns (node_ids, node_colors, node_sizes).
@@ -116,7 +115,7 @@ def _compute_node_style(
 
 def _draw_nodes(
     ax: plt.Axes,
-    pos: dict[int, tuple[float, float]],
+    pos: Node,
     node_ids: list[int],
     node_colors: list[tuple],
     node_sizes: list[float],
@@ -250,7 +249,7 @@ def _compute_link_rates(swarm: SwarmState) -> dict[tuple[int, int], float]:
 
 def _compute_arc_specs(
     swarm: SwarmState,
-    G: nx.Graph,
+    G: nx.Graph, #pylint: disable=invalid-name
     link_rates: dict[tuple[int, int], float],
     rate_clip_mbps: float = 100.0,
     # Changed default rad_val to be slightly higher for better separation
@@ -321,7 +320,7 @@ def _compute_arc_specs(
 
 
 def _draw_arcs(
-    ax: plt.Axes, pos: dict[int, tuple[float, float]], arc_specs: list[ArcSpec]
+    ax: plt.Axes, pos: Node, arc_specs: list[ArcSpec]
 ) -> None:
     """
     Draw directional arcs for flows using ArcSpec list.
@@ -338,7 +337,7 @@ def _draw_arcs(
     # We'll draw each arc individually so we can vary rad per edge.
     for arc in arc_specs:
         u, v, width, color, rad = arc
-        H = nx.DiGraph()
+        H = nx.DiGraph() #pylint: disable=invalid-name
         H.add_edge(u, v)
 
         # connectionstyle "arc3,rad=..." creates the curve.
@@ -366,6 +365,7 @@ def plot_swarm_snapshot(
     show: bool = True,
     show_topology: bool = False,
     show_colorbar: bool = True,
+    pos: Node | None = None,
 ) -> plt.Axes:
     """
     Plot a swarm snapshot:
@@ -382,6 +382,12 @@ def plot_swarm_snapshot(
                 GREEN scale if u is more complete than v (seeding direction)
                 BLUE scale otherwise (backwards flow)
             - rad chosen so u->v and v->u separate when both exist
+
+    Parameters
+    ----------
+    pos : Node | None
+        Pre-computed node positions. If provided, layout computation is skipped.
+        This significantly speeds up repeated plotting with the same topology.
     """
     swarm = _as_swarm(result_or_swarm)
     G: nx.Graph = swarm.graph
@@ -394,8 +400,12 @@ def plot_swarm_snapshot(
         ax.figure.set_dpi(150)
     ax.set_facecolor("#fafafa")
 
-    # 1) Layout
-    pos = _compute_layout(G, layout)
+    # 1) Layout - use pre-computed if provided, otherwise compute
+    if pos is None:
+        pos = compute_layout(G, layout)
+    else:
+        # Filter pos to only include nodes that exist in current graph
+        pos = {node: coord for node, coord in pos.items() if node in G.nodes()}
 
     # # 2) Node style
     node_ids, node_colors, node_sizes = _compute_node_style(swarm, G)
@@ -419,7 +429,7 @@ def plot_swarm_snapshot(
     _draw_arcs(ax, pos, arc_specs)
 
     # 6) Nodes (with seed outlined purple)
-    nodes = _draw_nodes(ax, pos, node_ids, node_colors, node_sizes, SEED_PEER_ID)
+    _draw_nodes(ax, pos, node_ids, node_colors, node_sizes, SEED_PEER_ID)
 
     # 7) Axes cosmetics
     ax.set_axis_off()
