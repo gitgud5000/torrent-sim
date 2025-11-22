@@ -1,13 +1,26 @@
 from __future__ import annotations
-from typing import Optional
+from typing import NamedTuple, TypeAlias
 
 import matplotlib.pyplot as plt
+from matplotlib import colors as mcolors
+
 import networkx as nx
 import numpy as np
 
 from torrent_sim.engine import SimulationResult
 from torrent_sim.model import SwarmState
 from torrent_sim.topology import SEED_PEER_ID
+
+
+class ArcSpec(NamedTuple):
+    u: int
+    v: int
+    width: float
+    color: tuple[float, float, float, float]
+    rad: float
+
+
+Node: TypeAlias = dict[int, tuple[float, float]]  # mapping node_id -> (x, y)
 
 
 def _as_swarm(obj) -> SwarmState:
