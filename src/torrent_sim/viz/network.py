@@ -1,11 +1,11 @@
 from __future__ import annotations
-from typing import NamedTuple, TypeAlias
+
+from typing import NamedTuple
 
 import matplotlib.pyplot as plt
-from matplotlib import colors as mcolors
-
 import networkx as nx
 import numpy as np
+from matplotlib import colors as mcolors
 
 from torrent_sim.engine import SimulationResult
 from torrent_sim.model import SwarmState
@@ -20,7 +20,7 @@ class ArcSpec(NamedTuple):
     rad: float
 
 
-Node: TypeAlias = dict[int, tuple[float, float]]  # mapping node_id -> (x, y)
+type Node = dict[int, tuple[float, float]]  # mapping node_id -> (x, y)
 
 
 def _as_swarm(obj) -> SwarmState:
@@ -53,8 +53,7 @@ def _compute_layout(G: nx.Graph, layout: str) -> Node:
     layout = layout.lower()
 
     if layout == "spring":
-        # force_relayout=False can help reuse positions if you ever reuse this
-        pos = nx.spring_layout(G, seed=42)
+        pos = nx.spring_layout(G, seed=42, k=0.15)  # k adjusts spacing
     elif layout in {"kamada_kawai", "kk"}:
         pos = nx.kamada_kawai_layout(G)
     elif layout == "circular":
@@ -84,11 +83,11 @@ def _compute_node_style(
 
     cmap = plt.get_cmap("cividis_r")  # reversed: 0 -> yellow, 1 -> blue
 
-    # visual parameters (tune later if you want)
+    # visual parameters
     size_base = 100.0
     size_scale = 35.0
 
-    seed_fill_rgba = mcolors.to_rgba("#1565c0")  # blue; outline handled in _draw_nodes
+    seed_fill_rgba = mcolors.to_rgba("#1565c0")
 
     node_colors: list[tuple] = []
     node_sizes: list[float] = []
@@ -100,7 +99,6 @@ def _compute_node_style(
         else:
             frac = peer.completion_fraction(num_pieces)
 
-        # color logic
         if node_id == SEED_PEER_ID:
             color = seed_fill_rgba
         else:
@@ -141,16 +139,19 @@ def _draw_nodes(
         linewidths=0.6,
         edgecolors="#444444",
     )
-    # add node_id label
-    for i, node_id in enumerate(node_ids):
+
+    # Labels with slight shadow effect for readability
+    for node_id in node_ids:
+        x, y = pos[node_id]
         ax.text(
-            pos[node_id][0],
-            pos[node_id][1],
+            x,
+            y,
             str(node_id),
             fontsize=8,
             ha="center",
             va="center",
             color="white",
+            fontweight="bold",
         )
 
     # Highlight seed (OG) with purple outline if present
@@ -167,9 +168,8 @@ def _draw_nodes(
             node_color=[seed_color],
             ax=ax,
             linewidths=4,
-            edgecolors="#b077d4",  # purple outline
+            edgecolors="#b077d4",
         )
-        # add node_id label
         ax.text(
             pos[seed_id][0],
             pos[seed_id][1],
@@ -178,6 +178,7 @@ def _draw_nodes(
             ha="center",
             va="center",
             color="white",
+            fontweight="bold",
         )
 
     return nodes
