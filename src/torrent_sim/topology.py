@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from collections.abc import Iterable
+from dataclasses import dataclass
 
 import networkx as nx
 import numpy as np
 
 from .config import GraphConfig
-
 
 # 3.2. Initial graph with seed
 # We need at least 1 node: the seed. Let’s standardize that peer id:

@@ -66,7 +66,7 @@ class PeerState:
         """Number of pieces this peer currently owns."""
         return len(self.owned_pieces)
 
-    def completion_fractions(self, num_pieces: int) -> float:
+    def completion_fraction(self, num_pieces: int) -> float:
         """Fraction of pieces owned (0.0 to 1.0)."""
         if num_pieces == 0:
             return 0.0
@@ -99,7 +99,7 @@ class SwarmState:
     graph: nx.Graph
     peers: dict[int, PeerState] = field(default_factory=dict)
     current_time: float = 0.0
-    rng: np.random.Generator = field(default_factory=lambda: np.random.default_rng())
+    rng: np.random.Generator = field(default_factory=np.random.default_rng)
 
     # Cached file-related quantities for convenience
     num_pieces: int = field(init=False)

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 from dataclasses import dataclass, field
 
 import networkx as nx
@@ -8,13 +9,13 @@ import numpy as np
 from .arrival import (
     ArrivalConfig,
     TimeConfig,
-    generate_poisson_arrivals,
     arrivals_up_to_time,
+    generate_poisson_arrivals,
 )
 from .bandwidth import BandwidthProfile, sample_bandwidth_profile
 from .config import Config
 from .model import DownloadTask, PeerState, SwarmState
-from .topology import create_initial_graph, add_peer_with_topology, SEED_PEER_ID
+from .topology import SEED_PEER_ID, add_peer_with_topology, create_initial_graph
 
 
 # Metrics & Results containers
@@ -39,6 +40,18 @@ class SimulationResult:
     config: Config
     swarm: SwarmState
     metrics: SimulationMetrics
+
+
+@dataclass
+class SimulationFrame:
+    time: float
+    swarm: SwarmState
+
+
+@dataclass
+class SimulationTrajectory:
+    result: SimulationResult
+    frames: list[SimulationFrame] = field(default_factory=list)
 
 
 # Helper: spawn a new peer
@@ -71,8 +84,7 @@ def _spawn_peer(
     add_peer_with_topology(swarm.graph, peer_id, cfg.graph, rng)
 
 
-# Helper: start new download (very simple policy for MVP)
-# We’ll define a max concurrent downloads per peer (MVP constant).
+# Helper: start new downloads (very simple policy for MVP)
 # For each active peer:
 #   if not complete, and has free slots:
 #       find neighbors that:
@@ -82,18 +94,18 @@ def _spawn_peer(
 #       choose a random neighbor.
 #       choose a random piece that neighbor has & peer lacks.
 #       create DownloadTask with remaining_bits = piece_size_bits.
-MAX_CONCURRENT_DOWNLOADS = 2  # MVP parameter; can go into Config later.
 
 
 def _start_new_downloads(swarm: SwarmState) -> None:
     """
-    For each active peer, start new downloads up to MAX_CONCURRENT_DOWNLOADS,
-    if neighbors have pieces they lack.
+    For each active peer, start new downloads up to the configured
+    max_concurrent_downloads if neighbors have pieces they lack.
     """
 
     rng = swarm.rng
     num_pieces = swarm.num_pieces
     piece_size_bits = swarm.piece_size_bits
+    max_concurrent = swarm.config.bandwidth.max_concurrent_downloads
 
     for peer in swarm.active_peers():
         # Skip seed (it already has all piece; treat it as pure uploader)
@@ -108,7 +120,7 @@ def _start_new_downloads(swarm: SwarmState) -> None:
         active_downloads = [t for t in peer.active_downloads if t.remaining_bits > 0]
         peer.active_downloads = active_downloads  # clean up completed downloads
 
-        free_slots = MAX_CONCURRENT_DOWNLOADS - len(active_downloads)
+        free_slots = max_concurrent - len(active_downloads)
         if free_slots <= 0:
             continue
 
@@ -220,8 +232,7 @@ def _step_downloads(swarm: SwarmState, dt: float) -> None:
             transferred_bits = rate * dt
 
             task.remaining_bits -= transferred_bits
-            if task.remaining_bits < 0:
-                task.remaining_bits = 0  # clamp
+            task.remaining_bits = max(task.remaining_bits, 0)  # clamp
 
 
 # 7️⃣ Helper: finalize completed pieces and completion times
@@ -231,9 +242,11 @@ def _step_downloads(swarm: SwarmState, dt: float) -> None:
 #   Optionally clear completed tasks,
 #   Set completed_time if peer now owns all pieces.
 def _finalize_completed_downloads(swarm: SwarmState) -> None:
-    """
-    For tasks that have finished (remaining_bits <= 0), grant the piece to the receiver peer
-    and record completion time if they now have the full file.
+    """Grant pieces for tasks that finished and set completion time.
+
+    For each active peer, any task with remaining_bits <= 0 yields its
+    piece. When a peer owns all pieces for the first time, record
+    completed_time.
     """
 
     num_pieces = swarm.num_pieces
@@ -281,7 +294,7 @@ def _log_metrics(swarm: SwarmState, metrics: SimulationMetrics) -> None:
     num_peers = len(peers)
     completed = sum(1 for p in peers if p.is_complete(swarm.num_pieces))
     avg_completion = (
-        sum(p.completion_fractions(swarm.num_pieces) for p in peers) / num_peers
+        sum(p.completion_fraction(swarm.num_pieces) for p in peers) / num_peers
     )
 
     metrics.times.append(t)
@@ -291,7 +304,9 @@ def _log_metrics(swarm: SwarmState, metrics: SimulationMetrics) -> None:
 
 
 # 9️⃣ Main entrypoint: run_timestep_sim
-def run_timestep_sim(config: Config) -> SimulationResult:
+def run_timestep_sim(config: Config,
+                     rng: np.random.Generator | None = None
+                     ) -> SimulationResult:
     """
     Run the 0->MVP timestep-based torrent simulation.
 
@@ -302,9 +317,12 @@ def run_timestep_sim(config: Config) -> SimulationResult:
     """
 
     # 1) Initialization
-    G: nx.Graph = create_initial_graph()
+    G: nx.Graph = create_initial_graph() # pylint: disable=invalid-name
     swarm = SwarmState(config=config, graph=G)
-    rng = swarm.rng
+    if rng is None:
+        rng = swarm.rng
+    else:
+        swarm.rng = rng
 
     # Initialize seed with full file and its own bandwidth
     seed_bw = sample_bandwidth_profile(config.bandwidth, rng)
@@ -361,3 +379,81 @@ def run_timestep_sim(config: Config) -> SimulationResult:
         swarm=swarm,
         metrics=metrics,
     )
+
+
+def run_timestep_sim_with_frames(
+    config: Config,
+    snapshot_interval: float = 5.0,
+    rng: np.random.Generator | None = None,
+) -> SimulationTrajectory:
+    """Run the timestep simulation and record snapshots.
+
+    Takes periodic deep copies of SwarmState (can be memory intensive
+    for large swarms) to enable later visualization/animation.
+    """
+
+    # 1) Initialization (same as run_timestep_sim)
+    G: nx.Graph = create_initial_graph()  # pylint: disable=invalid-name
+    swarm = SwarmState(config=config, graph=G)
+    if rng is None:
+        rng = swarm.rng
+    else:
+        swarm.rng = rng
+
+    seed_bw = sample_bandwidth_profile(config.bandwidth, rng)
+    swarm.initialize_seed(seed_bw)
+
+    schedule = generate_poisson_arrivals(config.arrival, config.time, rng)
+    arrival_index = 0
+    next_peer_id = SEED_PEER_ID + 1
+
+    metrics = SimulationMetrics()
+    frames: list[SimulationFrame] = []
+
+    t = 0.0
+    dt = config.time.dt
+    max_time = config.time.max_time
+
+    next_log_time = 0.0
+    log_interval = config.logging.log_interval
+
+    next_snapshot_time = 0.0
+
+    # 2) Main simulation loop
+    while t <= max_time:
+        swarm.current_time = t
+
+        # arrivals
+        new_join_times, arrival_index = arrivals_up_to_time(schedule, t, arrival_index)
+        for join_time in new_join_times:
+            _spawn_peer(swarm, next_peer_id, join_time)
+            next_peer_id += 1
+
+        # downloads
+        _start_new_downloads(swarm)
+        _step_downloads(swarm, dt)
+        _finalize_completed_downloads(swarm)
+
+        # log metrics
+        if t >= next_snapshot_time:
+            _log_metrics(swarm, metrics)
+            next_log_time += log_interval
+
+        # snapshot for animation
+        if t >= next_snapshot_time:
+            # deepcopy swarm state
+            frames.append(SimulationFrame(time=t, swarm=copy.deepcopy(swarm)))
+            next_snapshot_time += snapshot_interval
+
+        # Advance time
+        t += dt
+
+    swarm.current_time = t
+    _log_metrics(swarm, metrics)
+
+    result = SimulationResult(
+        config=config,
+        swarm=swarm,
+        metrics=metrics,
+    )
+    return SimulationTrajectory(result=result, frames=frames)

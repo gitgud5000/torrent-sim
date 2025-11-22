@@ -49,13 +49,13 @@ def test_peer_state_basic_methods():
 
     # Initially no pieces
     assert peer.num_pieces_owned == 0
-    assert peer.completion_fractions(num_pieces=100) == 0.0
+    assert peer.completion_fraction(num_pieces=100) == 0.0
     assert not peer.is_complete(100)
 
     # Add some pieces
     peer.owned_pieces.update({0, 1, 2})
     assert peer.num_pieces_owned == 3
-    assert peer.completion_fractions(10) == 0.3
+    assert peer.completion_fraction(10) == 0.3
     assert not peer.is_complete(10)
 
     # Complete case

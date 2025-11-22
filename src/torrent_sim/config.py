@@ -1,13 +1,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Tuple
 
 
 @dataclass
 class FileConfig:
-    file_size_mb: float = 1_000
-    piece_size_mb: float = 1
+    file_size_mb: float = 1_000  # 1 GB
+    piece_size_mb: float = 1 # 1 MB
 
     @property
     def num_pieces(self) -> int:
@@ -30,6 +29,8 @@ class ArrivalConfig:
 @dataclass
 class BandwidthConfig:
     # Probability a new peer is symmetric (up ~ down)
+    max_concurrent_downloads: int = 2
+
     prob_symmetric: float = 0.3
 
     # Symmetric peer (e.g. fiber)
@@ -97,4 +98,3 @@ __all__ = [
     "Config",
     "default_config",
 ]
-
