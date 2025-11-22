@@ -54,6 +54,26 @@ class SimulationTrajectory:
     frames: list[SimulationFrame] = field(default_factory=list)
 
 
+def _initialize_seed_bandwidth(
+    config: Config,
+    rng: np.random.Generator,
+) -> BandwidthProfile:
+    """
+    Create bandwidth profile for the seed peer.
+
+    If override_seed_bandwidth is enabled, uses configured values.
+    Otherwise, samples from the bandwidth distribution.
+    """
+    if config.bandwidth.override_seed_bandwidth:
+        return BandwidthProfile(
+            up_mbps=config.bandwidth.override_seed_up_mbps,
+            down_mbps=config.bandwidth.override_seed_down_mbps,
+            kind=PeerKind.SYMMETRIC,
+        )
+    else:
+        return sample_bandwidth_profile(config.bandwidth, rng)
+
+
 # Helper: spawn a new peer
 # When a new peer arrives, we:
 # sample its bandwidth profile,
@@ -326,14 +346,7 @@ def run_timestep_sim(config: Config,
         swarm.rng = rng
 
     # Initialize seed with full file and its own bandwidth
-    if config.bandwidth.override_seed_bandwidth:
-        seed_bw = BandwidthProfile(
-            up_mbps=config.bandwidth.override_seed_up_mbps,
-            down_mbps=config.bandwidth.override_seed_down_mbps,
-            kind=PeerKind.SYMMETRIC,
-        )
-    else:
-        seed_bw = sample_bandwidth_profile(config.bandwidth, rng)
+    seed_bw = _initialize_seed_bandwidth(config, rng)
     swarm.initialize_seed(seed_bw)
 
     # Arrival schedule for all non-seed peers
@@ -408,7 +421,8 @@ def run_timestep_sim_with_frames(
     else:
         swarm.rng = rng
 
-    seed_bw = sample_bandwidth_profile(config.bandwidth, rng)
+    # Initialize seed with full file and its own bandwidth
+    seed_bw = _initialize_seed_bandwidth(config, rng)
     swarm.initialize_seed(seed_bw)
 
     schedule = generate_poisson_arrivals(config.arrival, config.time, rng)
@@ -428,6 +442,8 @@ def run_timestep_sim_with_frames(
     next_snapshot_time = 0.0
 
     # 2) Main simulation loop
+    #TODO: fix this so a n + 1 frame is not generated
+    # so that exactly max_time is the last frame
     while t <= max_time:
         swarm.current_time = t
 
