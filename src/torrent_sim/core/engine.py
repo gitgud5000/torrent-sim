@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 import networkx as nx
 import numpy as np
 
+from ..config import Config
 from .arrival import (
     ArrivalConfig,
     TimeConfig,
@@ -13,7 +14,6 @@ from .arrival import (
     generate_poisson_arrivals,
 )
 from .bandwidth import BandwidthProfile, sample_bandwidth_profile
-from ..config import Config
 from .model import DownloadTask, PeerState, SwarmState
 from .topology import SEED_PEER_ID, add_peer_with_topology, create_initial_graph
 

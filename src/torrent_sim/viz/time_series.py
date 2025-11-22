@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import matplotlib.pyplot as plt
 
-from torrent_sim.core.engine import SimulationResult, SimulationMetrics
+from torrent_sim.core.engine import SimulationMetrics, SimulationResult
 
 
 def _as_metrics(obj) -> SimulationMetrics:

@@ -6,8 +6,8 @@ from dataclasses import dataclass, field
 import networkx as nx
 import numpy as np
 
-from .bandwidth import BandwidthProfile
 from ..config import Config
+from .bandwidth import BandwidthProfile
 from .topology import SEED_PEER_ID
 
 
