@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 from dataclasses import dataclass, field
 
 import networkx as nx
@@ -8,13 +9,13 @@ import numpy as np
 from .arrival import (
     ArrivalConfig,
     TimeConfig,
-    generate_poisson_arrivals,
     arrivals_up_to_time,
+    generate_poisson_arrivals,
 )
 from .bandwidth import BandwidthProfile, sample_bandwidth_profile
 from .config import Config
 from .model import DownloadTask, PeerState, SwarmState
-from .topology import create_initial_graph, add_peer_with_topology, SEED_PEER_ID
+from .topology import SEED_PEER_ID, add_peer_with_topology, create_initial_graph
 
 
 # Metrics & Results containers
@@ -39,6 +40,18 @@ class SimulationResult:
     config: Config
     swarm: SwarmState
     metrics: SimulationMetrics
+
+
+@dataclass
+class SimulationFrame:
+    time: float
+    swarm: SwarmState
+
+
+@dataclass
+class SimulationTrajectory:
+    result: SimulationResult
+    frames: list[SimulationFrame] = field(default_factory=list)
 
 
 # Helper: spawn a new peer
@@ -302,7 +315,7 @@ def run_timestep_sim(config: Config) -> SimulationResult:
     """
 
     # 1) Initialization
-    G: nx.Graph = create_initial_graph()
+    G: nx.Graph = create_initial_graph() # pylint: disable=invalid-name
     swarm = SwarmState(config=config, graph=G)
     rng = swarm.rng
 
@@ -361,3 +374,76 @@ def run_timestep_sim(config: Config) -> SimulationResult:
         swarm=swarm,
         metrics=metrics,
     )
+
+
+def run_timestep_sim_with_frames(
+    config: Config,
+    snapshot_interval: float = 5.0,
+) -> SimulationTrajectory:
+    """
+    Run the timestep simulation and record `SwarmState` snapshots at regular intervals.
+    NOTE: this uses deepcopy on SwarmState, which can be memory-intensive for large swarms.
+    """
+
+    # 1) Initialization (same as run_timestep_sim)
+    G: nx.Graph = create_initial_graph()  # pylint: disable=invalid-name
+    swarm = SwarmState(config=config, graph=G)
+    rng = swarm.rng
+
+    seed_bw = sample_bandwidth_profile(config.bandwidth, rng)
+    swarm.initialize_seed(seed_bw)
+
+    schedule = generate_poisson_arrivals(config.arrival, config.time, rng)
+    arrival_index = 0
+    next_peer_id = SEED_PEER_ID + 1
+
+    metrics = SimulationMetrics()
+    frames: list[SimulationFrame] = []
+
+    t = 0.0
+    dt = config.time.dt
+    max_time = config.time.max_time
+
+    next_log_time = 0.0
+    log_interval = config.logging.log_interval
+
+    next_snapshot_time = 0.0
+
+    # 2) Main simulation loop
+    while t < max_time:
+        swarm.current_time = t
+
+        # arrivals
+        new_join_times, arrival_index = arrivals_up_to_time(schedule, t, arrival_index)
+        for join_time in new_join_times:
+            _spawn_peer(swarm, next_peer_id, join_time)
+            next_peer_id += 1
+
+        # downloads
+        _start_new_downloads(swarm)
+        _step_downloads(swarm, dt)
+        _finalize_completed_downloads(swarm)
+
+        # log metrics
+        if t >= next_snapshot_time:
+            _log_metrics(swarm, metrics)
+            next_log_time += log_interval
+
+        # snapshot for animation
+        if t >= next_snapshot_time:
+            # deepcopy swarm state
+            frames.append(SimulationFrame(time=t, swarm=copy.deepcopy(swarm)))
+            next_snapshot_time += snapshot_interval
+
+        # Advance time
+        t += dt
+
+    swarm.current_time = t
+    _log_metrics(swarm, metrics)
+
+    result = SimulationResult(
+        config=config,
+        swarm=swarm,
+        metrics=metrics,
+    )
+    return SimulationTrajectory(result=result, frames=frames)
