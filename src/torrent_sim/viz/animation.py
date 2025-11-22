@@ -3,7 +3,7 @@ from __future__ import annotations
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 
-from torrent_sim.engine import SimulationTrajectory
+from torrent_sim.core.engine import SimulationTrajectory
 from torrent_sim.viz.network import (
     compute_layout,
     plot_swarm_snapshot,

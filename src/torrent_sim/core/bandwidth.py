@@ -5,7 +5,7 @@ from enum import Enum, auto
 
 import numpy as np
 
-from .config import BandwidthConfig
+from ..config import BandwidthConfig
 
 
 class PeerKind(Enum):

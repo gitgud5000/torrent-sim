@@ -6,9 +6,9 @@ import matplotlib.pyplot as plt
 import networkx as nx
 from matplotlib import colors as mcolors
 
-from torrent_sim.engine import SimulationResult
-from torrent_sim.model import SwarmState
-from torrent_sim.topology import SEED_PEER_ID
+from torrent_sim.core.engine import SimulationResult
+from torrent_sim.core.model import SwarmState
+from torrent_sim.core.topology import SEED_PEER_ID
 
 
 class ArcSpec(NamedTuple):

@@ -3,7 +3,7 @@ from __future__ import annotations
 import networkx as nx
 import numpy as np
 
-from .config import GraphConfig
+from ..config import GraphConfig
 
 # 3.2. Initial graph with seed
 # We need at least 1 node: the seed. Let’s standardize that peer id:

@@ -1,7 +1,7 @@
 import numpy as np
 
 from torrent_sim.config import BandwidthConfig
-from torrent_sim.bandwidth import (
+from torrent_sim.core.bandwidth import (
     BandwidthProfile,
     PeerKind,
     sample_bandwidth_profile,

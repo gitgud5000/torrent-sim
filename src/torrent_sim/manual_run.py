@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from torrent_sim.config import default_config
-from torrent_sim.engine import run_timestep_sim
+from torrent_sim.core.engine import run_timestep_sim
 
 
 def main() -> None:

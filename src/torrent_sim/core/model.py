@@ -7,7 +7,7 @@ import networkx as nx
 import numpy as np
 
 from .bandwidth import BandwidthProfile
-from .config import Config
+from ..config import Config
 from .topology import SEED_PEER_ID
 
 

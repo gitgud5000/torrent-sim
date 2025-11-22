@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from .config import ArrivalConfig, TimeConfig
+from ..config import ArrivalConfig, TimeConfig
 
 
 @dataclass

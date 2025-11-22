@@ -2,13 +2,13 @@ import numpy as np
 import networkx as nx
 
 from torrent_sim.config import Config
-from torrent_sim.model import (
+from torrent_sim.core.model import (
     SwarmState,
     PeerState,
     DownloadTask,
 )
-from torrent_sim.bandwidth import BandwidthProfile
-from torrent_sim.topology import SEED_PEER_ID
+from torrent_sim.core.bandwidth import BandwidthProfile
+from torrent_sim.core.topology import SEED_PEER_ID
 
 def test_swarm_state_initialization():
     cfg = Config()

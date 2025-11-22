@@ -1,5 +1,5 @@
 from torrent_sim.config import ArrivalConfig, TimeConfig
-from torrent_sim.arrival import generate_poisson_arrivals
+from torrent_sim.core.arrival import generate_poisson_arrivals
 
 def test_generate_poisson_arrivals_basic():
     arrival_cfg = ArrivalConfig(arrival_rate=0.1, max_peers=10, seed_join_time=0.0)

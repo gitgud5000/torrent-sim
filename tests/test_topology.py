@@ -3,7 +3,7 @@ import networkx as nx
 import pytest
 
 from torrent_sim.config import GraphConfig
-from torrent_sim.topology import (
+from torrent_sim.core.topology import (
     SEED_PEER_ID,
     create_initial_graph,
     add_peer_with_topology,
