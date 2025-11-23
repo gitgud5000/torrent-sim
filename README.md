@@ -3,7 +3,9 @@
 
 This project builds a **Python-based simulation of BitTorrent-style swarm dynamics**, starting simple and gradually adding realism. The aim is to model how a file propagates through a P2P network under configurable bandwidth distributions and network topologies, and to visualize how it diffuses through the network over time.  
 
-The simulator tracks piece-level transfers with concurrent download limits and bandwidth-constrained connections, collecting metrics on completion rates and swarm evolution. The broader goal is to build an intuitive (and quantitative) feel for how swarms behave, while also using the project as a way to explore discrete-event simulation techniques, network graph structures, and the mechanics that drive real P2P systems.
+The simulator tracks piece-level transfers with concurrent download limits and bandwidth-constrained connections, collecting metrics on completion rates and swarm evolution. 
+
+**The broader goal is to build an intuitive (and quantitative) feel for how swarms behave**, while also using the project as a way to explore **discrete-event simulation techniques**, **network graph structures**, and the mechanics that drive real P2P systems.
 
 > **Note on authorship:**  
 > This project is developed by me, with help from AI-assisted tools for brainstorming, code generation, and refinement. All architectural decisions, testing, and integration are still guided and validated manually.
