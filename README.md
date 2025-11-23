@@ -20,9 +20,9 @@ The simulator tracks piece-level transfers with concurrent download limits and b
 - Add visualization: swarm progress over time, network snapshots, and completion distributions.
 
 ### **Advanced Features Planned (Post-MVP)**
-- Choking/unchoking (BitTorrent tit-for-tat), to explore how different reciprocity and collaboration strategies influence swarm throughput and overall system efficiency.
-- Record periodic snapshots of the swarm state during the simulation for offline visualization and later animation
-- Move from interactive `FuncAnimation` to offloading parallel frame rendering (multiprocessing + ffmpeg), connecting the simulation snapshots to a faster offline pipeline.
-- Rarest-first piece selection, with room to experiment with alternative piece-request strategies—e.g., random-first, sequential-first, or balanced hybrid approaches—and compare how each one shapes swarm flow and completion dynamics.
-- Add bandwidth variability, including ramp-up effects, protocol overhead, and time-varying connection speeds.
-- Explore richer network models and peer‑discovery rules—different topology growth processes, attachment heuristics, and joining behaviors—to study how these choices shape swarm structure and performance.
+- [ ] Choking/unchoking (BitTorrent tit-for-tat), to explore how different reciprocity and collaboration strategies influence swarm throughput and overall system efficiency.
+- [x] Record periodic snapshots of the swarm state during the simulation for offline visualization and later animation
+- [x] Move from interactive `FuncAnimation` to offloading parallel frame rendering (multiprocessing + ffmpeg), connecting the simulation snapshots to a faster offline pipeline.
+- [ ] Rarest-first piece selection, with room to experiment with alternative piece-request strategies—e.g., random-first, sequential-first, or balanced hybrid approaches—and compare how each one shapes swarm flow and completion dynamics.
+- [ ] Add bandwidth variability, including ramp-up effects, protocol overhead, and time-varying connection speeds.
+- [ ] Explore richer network models and peer‑discovery rules—different topology growth processes, attachment heuristics, and joining behaviors—to study how these choices shape swarm structure and performance.
